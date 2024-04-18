@@ -1,7 +1,10 @@
 import os
 import streamlit as st
-import spotipy
 import time
+import urllib.request
+import re
+from pytube import YouTube
+import spotipy
 from spotipy import SpotifyOAuth, SpotifyOauthError
 from dotenv import load_dotenv
 
@@ -34,8 +37,12 @@ def main():
         st.session_state.user_playlists = {}
 
     if "playlist_tracks" not in st.session_state:
-        st.session_state.playlist_tracks = {}
-    
+        st.session_state.playlist_tracks = []
+
+    if "is_downloading" not in st.session_state:
+        st.session_state.is_downloading = False
+
+# streamlit UI
     st.header('🎶Download your favourite :green[Spotify] playlists', divider='green')
     
     user_url = st.text_input('Paste below your profile link', placeholder ='e.g. https://open.spotify.com/user/123456789')
@@ -78,8 +85,10 @@ def main():
         (st.session_state.user_playlists.keys()),
         placeholder="Select playlist...")
 
+# start download button
         if st.button("Download", use_container_width=True):
-            st.session_state.playlist_tracks = {}
+            st.session_state.playlist_tracks = []
+            st.session_state.is_downloading = True
             sp = st.session_state.spotipy_client
 
 # retrive selected playlist tracks by name and artist
@@ -91,14 +100,36 @@ def main():
                 while offset <= total:
                     tracks = sp.playlist_tracks(playlist_id=playlist_id, offset=offset)['items']
                     for track in tracks:
-                        st.session_state.playlist_tracks[track['track']['name']] = track['track']['artists'][0]['name']
+                        st.session_state.playlist_tracks.append([track['track']['artists'][0]['name'], track['track']['name']])
                     offset += 100
             else:
                 tracks = sp.playlist_tracks(playlist_id=playlist_id)['items']
                 for track in tracks:
-                    st.session_state.playlist_tracks[track['track']['name']] = track['track']['artists'][0]['name']
+                    st.session_state.playlist_tracks.append([track['track']['artists'][0]['name'], track['track']['name']])
 
-            st.write(st.session_state.playlist_tracks)
+# stop downloading button
+            if st.button("Stop downloading", use_container_width=True):
+                st.session_state.is_downloading = False
+
+# make direction to download files (it's on main C disk)
+            download_folder = os.path.join("C:/", selected_playlist)
+            if not os.path.exists(download_folder):
+                os.makedirs(download_folder)
+
+            with st.spinner("Downloading..."):
+                for track in st.session_state.playlist_tracks:
+                    if not st.session_state.is_downloading:
+                        break
+# search for tracks in Youtube
+                    search_query = urllib.parse.quote(f"{track[0]} {track[1]}")
+                    html = urllib.request.urlopen(f"https://www.youtube.com/results?search_query={search_query}")
+                    video_id = re.findall(r"watch\?v=(\S{11})", html.read().decode())[0]
+                    yt = YouTube(f"https://youtube.com/watch?v={video_id}")
+# # download tracks by pytube
+                    filename = f"{track[0]} - {track[1]}"
+                    yt.streams.filter(only_audio=True).first().download(output_path=download_folder, filename=filename)
+                st.balloons()
+                st.success('Download complete', icon="✅")
 
 
 if __name__ == "__main__":
