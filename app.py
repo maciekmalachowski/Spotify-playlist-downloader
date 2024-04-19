@@ -34,7 +34,7 @@ def main():
         st.session_state.user_authorise = False
 
     if "user_playlists" not in st.session_state:
-        st.session_state.user_playlists = {}
+        st.session_state.user_playlists = []
 
     if "playlist_tracks" not in st.session_state:
         st.session_state.playlist_tracks = []
@@ -47,72 +47,110 @@ def main():
     
     user_url = st.text_input('Paste below your profile link', placeholder ='e.g. https://open.spotify.com/user/123456789')
 
-
-    if st.button("Authorize", use_container_width=True) and user_url:
-        try:
-            st.session_state.user_playlists = {}
+    if st.button("Authorize", use_container_width=True):
+        if user_url:
+            try:
+                st.session_state.user_playlists = []
 # create spotify client
-            auth_menager = SpotifyOAuth(
-                client_id=client_id,
-                client_secret=client_secret,
-                scope="user-library-read playlist-read-private playlist-read-collaborative",
-            )
+                auth_menager = SpotifyOAuth(
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    scope="user-library-read playlist-read-private playlist-read-collaborative",
+                )
 
-            st.session_state.user_authorise = True
-            st.session_state.spotipy_client = spotipy.Spotify(auth_manager=auth_menager)
-            sp = st.session_state.spotipy_client
+                st.session_state.user_authorise = True
+                st.session_state.spotipy_client = spotipy.Spotify(auth_manager=auth_menager)
+    # change the name for easier accessibility
+                sp = st.session_state.spotipy_client
 
-# retrieve names and ids of playlists
-            user_playlist_data = sp.current_user_playlists()['items']
-            for item in user_playlist_data:
-                st.session_state.user_playlists[item['name']] = item['id']
+# retrieve names and ids of playlists and albums
+                user_playlist_data = sp.current_user_playlists()['items']
+                user_album_data = sp.current_user_saved_albums()['items']
 
-            progress_text = "Operation in progress. Please wait."
-            progress_bar = st.progress(0, text=progress_text)
+    # add playlists to session variable
+                for item in user_playlist_data:
+                    st.session_state.user_playlists.append([[item['name'], item['id']], item['type']])
+                
+    # add albums to session variable
+                for item in user_album_data:
+                    st.session_state.user_playlists.append([[item['album']['name'], item['album']['id']], item['album']['type']])
 
-            for percent_complete in range(100):
-                time.sleep(0.01)
-                progress_bar.progress(percent_complete + 1, text=progress_text)
-            time.sleep(1)
-            progress_bar.empty()
+    # user_playlists array looks like [[name, id], type]
+    # type means playlist or album
 
-        except SpotifyOauthError as e:
-            print(f"Spotify OAuth setup error: {e}")
+                progress_text = "Operation in progress. Please wait."
+                progress_bar = st.progress(0, text=progress_text)
+
+                for percent_complete in range(100):
+                    time.sleep(0.01)
+                    progress_bar.progress(percent_complete + 1, text=progress_text)
+                time.sleep(1)
+                progress_bar.empty()
+
+            except SpotifyOauthError as e:
+                st.write(f"Spotify OAuth setup error: {e}")
+
+    # raise it when url is empty
+        else:
+            st.warning('Paste your profile link', icon="⚠️")
+    
 
     if st.session_state.user_authorise:
+        download_direction = st.text_input("Set direction where playlist will be downloaded", placeholder="Default C:/")
+
+# retrieve playlist/album name from array and forward it to selectbox
+        playlists_names = []
+        for i in st.session_state.user_playlists:
+            playlists_names.append(i[0][0])
         selected_playlist = st.selectbox(
-        'Pick playlist you want to download:',
-        (st.session_state.user_playlists.keys()),
+        'Pick playlist/album you want to download:',
+        (playlists_names),
         placeholder="Select playlist...")
 
 # start download button
         if st.button("Download", use_container_width=True):
-            st.session_state.playlist_tracks = []
             st.session_state.is_downloading = True
+            st.session_state.playlist_tracks = []
+    # change the name for easier accessibility
             sp = st.session_state.spotipy_client
 
-# retrive selected playlist tracks by name and artist
-            playlist_id = st.session_state.user_playlists[selected_playlist]
-            # we have to bypass spotipy limit which is set to 100 tracks
-            total = sp.playlist_tracks(playlist_id=playlist_id)['total']
-            if total > 100:
-                offset = 0
-                while offset <= total:
-                    tracks = sp.playlist_tracks(playlist_id=playlist_id, offset=offset)['items']
+# retrieve tracks from the selected playlist by name and artist
+            for i in st.session_state.user_playlists:
+                if i[0][0] == selected_playlist:
+                    playlist_id = i[0][1]
+                    playlist_type = i[1]
+    # type division into playlist and album is needed because spotipy uses two different methods to retrieve the tracks
+
+    # we have to bypass spotipy limit which is set to 100 tracks
+            if playlist_type == 'playlist':
+                total = sp.playlist_tracks(playlist_id=playlist_id)['total']
+                if total > 100:
+                    offset = 0
+                    while offset <= total:
+                        tracks = sp.playlist_tracks(playlist_id=playlist_id, offset=offset)['items']
+                        for track in tracks:
+                            st.session_state.playlist_tracks.append([track['track']['artists'][0]['name'], track['track']['name']])
+                        offset += 100
+                else:
+                    tracks = sp.playlist_tracks(playlist_id=playlist_id)['items']
                     for track in tracks:
                         st.session_state.playlist_tracks.append([track['track']['artists'][0]['name'], track['track']['name']])
-                    offset += 100
             else:
-                tracks = sp.playlist_tracks(playlist_id=playlist_id)['items']
+                tracks = sp.album_tracks(album_id=playlist_id)['items']
                 for track in tracks:
-                    st.session_state.playlist_tracks.append([track['track']['artists'][0]['name'], track['track']['name']])
+                    st.session_state.playlist_tracks.append([track['artists'][0]['name'], track['name']])
 
 # stop downloading button
             if st.button("Stop downloading", use_container_width=True):
                 st.session_state.is_downloading = False
 
-# make direction to download files (it's on main C disk)
-            download_folder = os.path.join("C:/", selected_playlist)
+# specify and make the direction to download files (default is C:/)
+            if download_direction == '':
+                download_path = "C:/"
+            else:
+                download_path = download_direction
+    # we need to get rid of forbidden symbols when creating a folder
+            download_folder = os.path.join(download_path, re.sub('[\/:*?<>|"]','', selected_playlist))
             if not os.path.exists(download_folder):
                 os.makedirs(download_folder)
 
@@ -125,12 +163,15 @@ def main():
                     html = urllib.request.urlopen(f"https://www.youtube.com/results?search_query={search_query}")
                     video_id = re.findall(r"watch\?v=(\S{11})", html.read().decode())[0]
                     yt = YouTube(f"https://youtube.com/watch?v={video_id}")
-# # download tracks by pytube
-                    filename = f"{track[0]} - {track[1]}"
+
+# download tracks via pytube
+    # we need to get rid of forbidden symbols as above
+                    filename = f"{track[0]} - {track[1]}.mp4"
+                    filename = re.sub('[\/:*?<>|"]','', filename)
                     yt.streams.filter(only_audio=True).first().download(output_path=download_folder, filename=filename)
+
                 st.balloons()
                 st.success('Download complete', icon="✅")
-
 
 if __name__ == "__main__":
     main()
