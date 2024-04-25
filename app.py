@@ -15,7 +15,7 @@ def main():
 # set streamlit page config
     st.set_page_config(
             page_title="Spotify playlist downloader",
-            page_icon="./favicon.png", 
+            page_icon="./icon.png", 
             layout="centered",
             initial_sidebar_state="collapsed",
             )
@@ -43,8 +43,12 @@ def main():
         st.session_state.is_downloading = False
 
 # streamlit UI
-    st.header('🎶Download your favourite :green[Spotify] playlists', divider='green')
-    
+    col1, col2 = st.columns([1,4])
+    with col1:
+        st.image("icon.png", width=120)
+    with col2:
+        st.header('Download your favourite :green[Spotify] playlists and albums', divider='green')
+
     user_url = st.text_input('Paste below your profile link', placeholder ='e.g. https://open.spotify.com/user/123456789')
 
     if st.button("Authorize", use_container_width=True):
@@ -135,7 +139,8 @@ def main():
                     tracks = sp.playlist_tracks(playlist_id=playlist_id)['items']
                     for track in tracks:
                         st.session_state.playlist_tracks.append([track['track']['artists'][0]['name'], track['track']['name']])
-            else:
+                        
+            if playlist_type == 'album':
                 tracks = sp.album_tracks(album_id=playlist_id)['items']
                 for track in tracks:
                     st.session_state.playlist_tracks.append([track['artists'][0]['name'], track['name']])
@@ -170,6 +175,7 @@ def main():
                     filename = re.sub('[\/:*?<>|"]','', filename)
                     yt.streams.filter(only_audio=True).first().download(output_path=download_folder, filename=filename)
 
+                st.session_state.is_downloading = False
                 st.balloons()
                 st.success('Download complete', icon="✅")
 
