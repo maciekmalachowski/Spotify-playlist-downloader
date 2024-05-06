@@ -9,7 +9,6 @@ from spotipy import SpotifyOAuth, SpotifyOauthError
 from dotenv import load_dotenv
 
 # https://open.spotify.com/user/mastiff03?si=ce27f0222fe44fa6
-# https://open.spotify.com/user/21olcekn5v4tdmnhtiqsjpicq?si=66cabee344064d3d
 
 def main():
 # set streamlit page config
@@ -24,7 +23,6 @@ def main():
     load_dotenv('.env')
     client_id = os.getenv("SPOTIPY_CLIENT_ID")
     client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
-    # redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI")
 
 # set needed sessions
     if "spotipy_client" not in st.session_state:
