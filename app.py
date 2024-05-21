@@ -8,8 +8,6 @@ import spotipy
 from spotipy import SpotifyOAuth, SpotifyOauthError
 from dotenv import load_dotenv
 
-# https://open.spotify.com/user/mastiff03?si=ce27f0222fe44fa6
-
 def main():
 # set streamlit page config
     st.set_page_config(
