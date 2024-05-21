@@ -68,9 +68,9 @@ Streamlit will launch the *app.py* file contained in the folder and *automatical
 
 <h1 align="center" id="app-appearance"> App appearance 🔍</h1>
 
-#### The user unterface is prepared to guide the user step-by-step.
+<h4 align="center"> The user unterface is prepared to guide the user step-by-step.</h4>
 
-<p align="center"><img src="media/appearance.png"></p>
+![Appearance](media/appearance.gif)
 
 
 
