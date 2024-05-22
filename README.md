@@ -61,7 +61,7 @@ Streamlit will launch the *app.py* file contained in the folder and *automatical
 ### Then it redirects us to https://google.com/. We have to copy the whole link and paste it into the terminal, where it automatically asks us for it. 
 ### After this step, Spotipy reads our liked albums and created playlists with their songs. 
 ### We can confidently choose what we want to download and then press the download button. 
-### In the meantime, the YouTube library searches YouTube for the names of our songs and downloads them at the indicated location. 
+### In the meantime, the Pytube library searches YouTube for the names of our songs and downloads them at the indicated location. 
 ### When the download is complete, we get the appropriate message.
 
 <br>
